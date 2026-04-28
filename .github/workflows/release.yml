@@ -13,10 +13,18 @@ name: Release to npm
 #   3. This workflow handles the rest
 #
 # Authentication:
-#   - npm: OIDC via Trusted Publishers (configured on the npm package).
-#     No long-lived token — the runner mints a short-lived credential at
-#     publish time. Requires `id-token: write` permission and npm CLI ≥ 11.5.
-#   - Apify: APIFY_TOKEN secret (already present, also used by smoke.yml).
+#   - npm: OIDC via Trusted Publishers is the steady-state path (configured
+#     on the npm package after first publish). No long-lived token — the
+#     runner mints a short-lived credential at publish time. Requires
+#     `id-token: write` permission and npm CLI ≥ 11.5.
+#   - npm BOOTSTRAP path: npm does not allow OIDC for the very first publish
+#     of a brand-new package (https://github.com/npm/cli/issues/8544). For
+#     v0.1.0 only, we use a granular access token stored as
+#     NPM_TOKEN_BOOTSTRAP. After v0.1.0 publishes, configure Trusted
+#     Publisher on npmjs.com, revoke the bootstrap token, and DELETE the
+#     NPM_TOKEN_BOOTSTRAP repo secret. The publish step below auto-detects
+#     which path to use based on whether the secret is present.
+#   - Apify: APIFY_TOKEN secret (also used by smoke.yml).
 
 on:
   push:
@@ -121,12 +129,32 @@ jobs:
           bash scripts/smoke-test.sh
           echo "Smoke test passed. Proceeding to publish."
 
-      - name: Publish to npm (OIDC + provenance)
-        # No NODE_AUTH_TOKEN — npm CLI uses the GitHub OIDC id-token to
-        # exchange for a short-lived publish credential, scoped to this
-        # exact workflow run. Requires Trusted Publisher to be configured
-        # on npmjs.com for this package + repo + workflow file.
-        run: npm publish --provenance --access public
+      - name: Publish to npm (OIDC if available, bootstrap token for first publish)
+        # Steady state: no NODE_AUTH_TOKEN — npm CLI uses the GitHub OIDC
+        # id-token to exchange for a short-lived publish credential, scoped
+        # to this exact workflow run. Requires Trusted Publisher to be
+        # configured on npmjs.com for this package + repo + workflow file.
+        #
+        # First-publish bootstrap: npm does not let you configure Trusted
+        # Publisher for a package that does not yet exist. If the
+        # NPM_TOKEN_BOOTSTRAP secret is present, we fall back to token
+        # auth for this single publish. After v0.1.0 succeeds, configure
+        # OIDC and DELETE this secret — the workflow will then use OIDC
+        # automatically (no code change needed).
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_BOOTSTRAP }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::warning::Using NPM_TOKEN_BOOTSTRAP for first-publish path. Revoke this token and DELETE the repo secret after configuring Trusted Publisher on npmjs.com."
+            # --provenance still works in token mode for public repos +
+            # public packages because GitHub's id-token is independently
+            # used for the SLSA attestation.
+            npm publish --provenance --access public
+          else
+            echo "NPM_TOKEN_BOOTSTRAP not set — using OIDC Trusted Publisher path."
+            npm publish --provenance --access public
+          fi
 
       - name: Verify published version
         env:
