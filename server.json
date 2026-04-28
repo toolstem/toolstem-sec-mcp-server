@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-16/server.schema.json",
   "name": "io.github.toolstem/toolstem-sec-mcp-server",
-  "description": "SEC filing intelligence MCP for AI agents — insider signals, 13F flow, material events. Pre-computed.",
+  "description": "SEC filing MCP for AI agents — insider signals, 13F flow, material events. Pre-computed.",
   "repository": {
     "url": "https://github.com/toolstem/toolstem-sec-mcp-server",
     "source": "github"
