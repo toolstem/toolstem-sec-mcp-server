@@ -5,9 +5,9 @@
   "schemaVersion": 1,
   "properties": {
     "tool": {
-      "title": "Tool",
+      "title": "Tool (optional)",
       "type": "string",
-      "description": "Which tool to run. If omitted, runs a default demonstration (get_company_filings_summary for AAPL) so first-time evaluators see real output. Real usage should always specify a tool.",
+      "description": "Which tool to run. Leave blank to run the no-charge default demonstration (get_company_filings_summary for AAPL) — useful for first-time evaluators and directory health-check probes. For real usage, pick a tool and provide ticker_or_cik (or tickers_or_ciks for compare_disclosure_signals).",
       "enum": [
         "get_company_filings_summary",
         "get_insider_signal",
@@ -15,20 +15,19 @@
         "get_material_events_digest",
         "compare_disclosure_signals"
       ],
-      "default": "get_company_filings_summary",
       "editor": "select"
     },
-    "ticker": {
+    "ticker_or_cik": {
       "title": "Ticker or CIK",
       "type": "string",
-      "description": "Company ticker symbol (e.g. AAPL) or CIK (e.g. 320193). Used by tools 1-4.",
+      "description": "Company ticker symbol (e.g. AAPL) or CIK (e.g. 320193). Used by get_company_filings_summary, get_insider_signal, get_institutional_signal, and get_material_events_digest.",
       "editor": "textfield",
       "prefill": "AAPL"
     },
-    "tickers": {
-      "title": "Tickers to Compare",
+    "tickers_or_ciks": {
+      "title": "Tickers or CIKs to Compare",
       "type": "array",
-      "description": "2-5 company tickers for compare_disclosure_signals (e.g. [\"AAPL\", \"MSFT\", \"GOOGL\"])",
+      "description": "2-5 company tickers or CIKs for compare_disclosure_signals (e.g. [\"AAPL\", \"MSFT\", \"GOOGL\"])",
       "editor": "stringList",
       "items": { "type": "string" }
     },

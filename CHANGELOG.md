@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] - 2026-04-28
+
+### Fixed
+
+- **Apify input schema field names now match `actor.ts`.** Renamed `ticker` → `ticker_or_cik` and `tickers` → `tickers_or_ciks` in `.actor/input_schema.json` so user input from the Apify Console actually reaches the dispatcher. Previously, any value typed into the Console fell through to the hardcoded default because the actor read keys that the schema did not define.
+- **Removed `default: 'get_company_filings_summary'`** from the `tool` field in `.actor/input_schema.json`. The default value made `rawInput.tool` always truthy, which disabled the no-charge default-demo branch entirely — every Console run hit a real EDGAR call and a `tool-call` charge attempt regardless of intent. Now an empty input genuinely produces an undefined `tool`, which routes through the cached default-demo path with no charge as designed.
+- **Tool field title relabeled** to "Tool (optional)" with updated description so first-time evaluators see at a glance that they can leave it blank for a free demo run.
+
+### Why this matters
+
+Without these fixes, the no-charge default-demo + 6h cache pattern shipped in v0.1.0 was inert. Apify Console smoke tests on Apr 28 evening (run `q1z92Cd6FbXDLFj2v`) confirmed the actor was hitting EDGAR and attempting to charge on every empty-input run, exactly the behavior that suppressed the finance actor's discoverability ranking.
+
+---
+
 ## [0.1.0] - 2026-04-27
 
 ### Added

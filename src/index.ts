@@ -160,7 +160,7 @@ const DisclosureComparisonShape = {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'toolstem-sec-mcp-server',
-    version: '0.1.0',
+    version: '0.1.1',
   });
 
   // ---------------------------------------------------------------------------
@@ -389,7 +389,7 @@ async function runHttp(): Promise<void> {
   }, 60_000).unref();
 
   app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.0' });
+    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.1' });
   });
 
   app.post('/mcp', async (req: Request, res: Response) => {
