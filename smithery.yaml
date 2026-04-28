@@ -1,0 +1,23 @@
+# Smithery configuration file: https://smithery.ai/docs/config
+#
+# Remote MCP server hosted on Apify. Distributed only as a hosted service
+# via Apify's pay-per-event billing.
+#
+# Token is passed as a query parameter because Apify's MCP gateway
+# accepts ?token=<APIFY_TOKEN> and Smithery's Bearer-header templating
+# was not being interpolated during scan.
+startCommand:
+  type: http
+  url: https://mcp.apify.com/?tools=toolstem/toolstem-sec-mcp-server&token={{config.apifyToken}}
+  configSchema:
+    type: object
+    required:
+      - apifyToken
+    properties:
+      apifyToken:
+        type: string
+        description: >-
+          Apify API token. Create one at
+          https://console.apify.com/account/integrations. Billing runs
+          through your Apify account (pay-per-event).
+    additionalProperties: false

@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.github
+storage
+apify_storage
+crawlee_storage
+.env
+*.log

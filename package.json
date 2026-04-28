@@ -1,0 +1,65 @@
+{
+  "name": "toolstem-sec-mcp-server",
+  "version": "0.1.0",
+  "description": "Agent-ready SEC filing intelligence MCP server — insider signals, institutional flow, material events digest. Pre-computed signals over raw filings.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "toolstem-sec-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
+    "dist/tools/",
+    "dist/services/",
+    "dist/utils/",
+    "dist/data/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/index.js",
+    "start:http": "node dist/index.js --http",
+    "start:actor": "node dist/actor.js",
+    "dev": "tsx src/index.ts",
+    "smoke": "bash scripts/smoke-test.sh"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sec",
+    "edgar",
+    "sec-filings",
+    "insider-trading",
+    "13f",
+    "8-k",
+    "ai-agent",
+    "toolstem"
+  ],
+  "author": "Toolstem",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toolstem/toolstem-sec-mcp-server.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "apify": "^3.3.0",
+    "express": "^4.21.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "mcpName": "io.github.toolstem/toolstem-sec-mcp-server"
+}

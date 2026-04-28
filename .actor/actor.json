@@ -1,0 +1,11 @@
+{
+  "actorSpecification": 1,
+  "name": "toolstem-sec-mcp-server",
+  "title": "Toolstem SEC Filing Intelligence",
+  "description": "Agent-ready SEC filing intelligence MCP. Five curated tools — filings summary, insider buying signal, institutional flow signal, material events digest, and side-by-side disclosure comparison. Pre-computed signals over raw EDGAR filings.",
+  "version": "0.1",
+  "actorPermissionLevel": "LIMITED_PERMISSIONS",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "dockerContextDir": ".."
+}

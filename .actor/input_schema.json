@@ -1,0 +1,53 @@
+{
+  "title": "Toolstem SEC Filing Intelligence",
+  "description": "SEC filing intelligence for AI agents — 5 tools: filings summary, insider signal, institutional signal, material events digest, and disclosure comparison.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "tool": {
+      "title": "Tool",
+      "type": "string",
+      "description": "Which tool to run. If omitted, runs a default demonstration (get_company_filings_summary for AAPL) so first-time evaluators see real output. Real usage should always specify a tool.",
+      "enum": [
+        "get_company_filings_summary",
+        "get_insider_signal",
+        "get_institutional_signal",
+        "get_material_events_digest",
+        "compare_disclosure_signals"
+      ],
+      "default": "get_company_filings_summary",
+      "editor": "select"
+    },
+    "ticker": {
+      "title": "Ticker or CIK",
+      "type": "string",
+      "description": "Company ticker symbol (e.g. AAPL) or CIK (e.g. 320193). Used by tools 1-4.",
+      "editor": "textfield",
+      "prefill": "AAPL"
+    },
+    "tickers": {
+      "title": "Tickers to Compare",
+      "type": "array",
+      "description": "2-5 company tickers for compare_disclosure_signals (e.g. [\"AAPL\", \"MSFT\", \"GOOGL\"])",
+      "editor": "stringList",
+      "items": { "type": "string" }
+    },
+    "lookback_days": {
+      "title": "Lookback (days)",
+      "type": "integer",
+      "description": "Days to look back for insider transactions (get_insider_signal) or material events (get_material_events_digest). Default 90 / 365 respectively.",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 1825
+    },
+    "quarters_back": {
+      "title": "Quarters Back",
+      "type": "integer",
+      "description": "Quarters to look back for 13F holdings comparison (get_institutional_signal). Default 4.",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 12
+    }
+  },
+  "required": []
+}
