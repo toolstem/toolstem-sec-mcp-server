@@ -27,14 +27,18 @@ PASS=0
 FAIL=0
 WARN=0
 FAILURES=()
-# Most recent HTTP status code from call_tool, captured into a global so the
-# caller can assert HTTP 2xx without re-issuing the request.
-LAST_HTTP_CODE=""
+# Most recent HTTP status code from call_tool, persisted to a tmp file so it
+# survives across command-substitution subshells. A previous in-memory variable
+# was reset to empty every call because `RESP=$(call_tool ...)` runs call_tool
+# inside a subshell whose variable assignments do not propagate to the parent.
+HTTP_CODE_FILE="$(mktemp -t smoke_http_code.XXXXXX)"
+trap 'rm -f "$HTTP_CODE_FILE"' EXIT
 
 call_tool() {
   local name="$1"
   local payload="$2"
-  local body_file="/tmp/smoke_resp_$$.json"
+  local body_file
+  body_file="$(mktemp -t smoke_resp.XXXXXX)"
   local http_code
   # `-w "%{http_code}"` prints the HTTP status to stdout while the body is
   # written to a temp file. `-sS` keeps curl quiet but still surfaces network
@@ -45,7 +49,9 @@ call_tool() {
     -H "$APIFY_AUTH_HEADER" \
     -H "Content-Type: application/json" \
     -d "$payload" 2>/dev/null || echo "000")
-  LAST_HTTP_CODE="$http_code"
+  # Persist to file (NOT a shell variable) so the parent shell can read it
+  # after the command-substitution subshell exits.
+  printf '%s' "$http_code" > "$HTTP_CODE_FILE"
   if [ -f "$body_file" ]; then
     cat "$body_file"
     rm -f "$body_file"
@@ -54,7 +60,10 @@ call_tool() {
 
 assert_http_2xx() {
   local label="$1"
-  local code="$LAST_HTTP_CODE"
+  local code=""
+  if [ -f "$HTTP_CODE_FILE" ]; then
+    code="$(cat "$HTTP_CODE_FILE")"
+  fi
   if [ -n "$code" ] && [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
     check "HTTP 2xx [$label]" 1
   else
