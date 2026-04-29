@@ -6,7 +6,7 @@
  *   - get_company_filings_summary  — filing velocity, material event counts, disclosure trend
  *   - get_insider_signal           — insider Form 3/4/4A activity probe
  *   - get_institutional_signal     — activist risk flag (13D/13D/A); 13F-HR in v0.2
- *   - get_material_events_digest   — 8-K item-level severity digest (premium $0.02)
+ *   - get_material_events_digest   — 8-K item-level severity digest (premium tier)
  *   - compare_disclosure_signals   — side-by-side comparison of 2-5 companies
  *
  * Supports two transports:
@@ -160,7 +160,7 @@ const DisclosureComparisonShape = {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'toolstem-sec-mcp-server',
-    version: '0.1.1',
+    version: '0.1.2',
   });
 
   // ---------------------------------------------------------------------------
@@ -275,7 +275,7 @@ export function createServer(): McpServer {
   );
 
   // ---------------------------------------------------------------------------
-  // Tool 4: get_material_events_digest (premium $0.02)
+  // Tool 4: get_material_events_digest (premium tier)
   // ---------------------------------------------------------------------------
 
   server.registerTool(
@@ -289,7 +289,7 @@ export function createServer(): McpServer {
         '(RED / YELLOW / GREEN). Returns redflag_count (events with any RED item) and ' +
         'category_counts for quick categorical analysis. Answers: "Has this company ' +
         'disclosed a cybersecurity incident, restatement, or going-concern risk recently?" ' +
-        'Premium tool — $0.02 per call.',
+        'Premium-tier tool. See the actor pricing page for current per-call cost.',
       inputSchema: {
         ticker_or_cik: z
           .string()
@@ -389,7 +389,7 @@ async function runHttp(): Promise<void> {
   }, 60_000).unref();
 
   app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.1' });
+    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.2' });
   });
 
   app.post('/mcp', async (req: Request, res: Response) => {

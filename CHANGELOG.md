@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.2] - 2026-04-29
+
+### Changed
+
+- **Three-tier per-result pricing model.** Replaced the previous two-tier pricing (`tool-call` / `tool-call-premium`) with a three-tier model aligned with Apify ecosystem per-result norms ($0.40–$1.50 per 1 000 results).
+
+  | Tool | Tier | PPE Event | Price per call |
+  | --- | --- | --- | --- |
+  | `get_company_filings_summary` | Cheap | `tool-call` | $0.005 |
+  | `get_insider_signal` | Standard | `tool-call-standard` | $0.05 |
+  | `get_institutional_signal` | Standard | `tool-call-standard` | $0.05 |
+  | `get_material_events_digest` | Premium | `tool-call-premium` | $0.50 |
+  | `compare_disclosure_signals` | Premium | `tool-call-premium` | $0.50 |
+
+- **Premium tier price increased from $0.02 → $0.50.** The previous $0.02 price was below the Apify ecosystem floor for compute-intensive per-result operations. Material events digests and cross-company comparison signals require multiple parallel EDGAR fetches and classification passes; $0.50 gross ($0.40 net after 20 % Apify commission) is consistent with comparable Apify actors in the data-enrichment category.
+
+- **New Standard tier ($0.05) for insider and institutional signals.** These tools perform targeted form-type filtering over the full submissions feed and return structured signal data — higher value than a basic filing summary but materially cheaper than a full multi-document digest computation. The new `tool-call-standard` PPE event is added in the Apify Console after this release ships.
+
+- **Default-demo free runs preserved.** No-input Actor invocations (directory health-check probes, first-time evaluators) continue to skip all PPE charges and serve from a 6-hour KV cache. No behaviour change from v0.1.1.
+
+- **`src/actor.ts` refactored:** The `isPremium` boolean ternary is replaced by a `PRICING_TIER` lookup table (`Record<ActorInput['tool'], string>`), making future tier additions a one-line diff instead of a conditional chain.
+
+---
+
 ## [0.1.1] - 2026-04-28
 
 ### Fixed

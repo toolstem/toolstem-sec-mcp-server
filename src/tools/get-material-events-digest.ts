@@ -1,5 +1,5 @@
 /**
- * Tool 4: get_material_events_digest  (premium — $0.02 per call)
+ * Tool 4: get_material_events_digest  (premium tier)
  *
  * Fetches all 8-K and 8-K/A filings for a company within a configurable
  * lookback window and maps each filing's item codes to plain-English labels,
@@ -90,7 +90,7 @@ const EIGHT_K_FORMS = new Set(['8-K', '8-K/A']);
 /**
  * Build a digest of material events (8-K/8-K/A filings) for a company.
  *
- * This is a premium tool ($0.02 per call). The item data is pulled entirely
+ * This is a premium-tier tool. The item data is pulled entirely
  * from the submissions index — no per-filing HTTP requests are made in v0.1.
  *
  * @param input        Ticker symbol or CIK.

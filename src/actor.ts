@@ -8,8 +8,13 @@
  * probes.
  *
  * Default-demo runs are NOT charged the per-call PPE event.
- * get_material_events_digest fires a premium `tool-call-premium` event ($0.02).
- * All other real tool calls fire the standard `tool-call` event ($0.005).
+ *
+ * Three-tier per-result pricing (configured in Apify Console):
+ *   Cheap    — `tool-call`          $0.005  — get_company_filings_summary
+ *   Standard — `tool-call-standard` $0.05   — get_insider_signal, get_institutional_signal
+ *   Premium  — `tool-call-premium`  $0.50   — get_material_events_digest, compare_disclosure_signals
+ *
+ * Apify retains a 20 % commission; the net amounts above are gross PPE prices.
  */
 
 import { Actor } from 'apify';
@@ -173,10 +178,20 @@ async function main(): Promise<void> {
       // eslint-disable-next-line no-console
       console.log('Default demonstration result cached for 6h. PPE charge skipped (probe).');
     } else {
-      // Premium tool fires a higher-value PPE event; all others fire the
-      // standard tool-call event.
-      const isPremium = input.tool === 'get_material_events_digest';
-      const eventName = isPremium ? 'tool-call-premium' : 'tool-call';
+      // Three-tier routing table: maps each tool name to its PPE event name.
+      // Dollar amounts are configured in the Apify Console, not in code.
+      // Type the value side as a union too — a typo like 'tool_call_standard'
+      // (underscore instead of hyphen) would otherwise compile and silently
+      // mis-charge. With this union, tsc fails loudly.
+      type PpeEventName = 'tool-call' | 'tool-call-standard' | 'tool-call-premium';
+      const PRICING_TIER: Record<ActorInput['tool'], PpeEventName> = {
+        get_company_filings_summary: 'tool-call',           // Cheap    — $0.005
+        get_insider_signal:          'tool-call-standard',  // Standard — $0.05
+        get_institutional_signal:    'tool-call-standard',  // Standard — $0.05
+        get_material_events_digest:  'tool-call-premium',   // Premium  — $0.50
+        compare_disclosure_signals:  'tool-call-premium',   // Premium  — $0.50
+      };
+      const eventName = PRICING_TIER[input.tool];
       const chargeResult = await Actor.charge({ eventName });
       // eslint-disable-next-line no-console
       console.log('PPE charge result:', JSON.stringify(chargeResult));

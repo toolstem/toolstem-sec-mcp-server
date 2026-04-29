@@ -100,7 +100,7 @@ Probes for activist investor activity via SC 13D / 13D/A filings.
 
 ---
 
-### 4. `get_material_events_digest` ⚡ premium ($0.02)
+### 4. `get_material_events_digest` ⚡ premium ($0.50)
 Severity-ranked digest of all 8-K and 8-K/A filings within a lookback window. Maps each item code to a plain-English label and severity rating.
 
 | Severity | Examples |
@@ -176,6 +176,22 @@ Returns winners (as **CIKs**, not tickers — cross-reference with the `companie
   "meta": { "source": "sec_edgar_direct", "data_delay": "live" }
 }
 ```
+
+---
+
+## Pricing
+
+All calls are billed on a **per-result** basis via Apify's Pay-Per-Event (PPE) system. Pricing is charged at the time the tool returns its result.
+
+| Tool | Tier | Price per call |
+| --- | --- | --- |
+| `get_company_filings_summary` | Cheap | $0.005 |
+| `get_insider_signal` | Standard | $0.05 |
+| `get_institutional_signal` | Standard | $0.05 |
+| `get_material_events_digest` | Premium | $0.50 |
+| `compare_disclosure_signals` | Premium | $0.50 |
+
+Default-demo probes (Actor runs with no `tool` input) are **free** — they serve a cached result and do not fire a PPE charge. This keeps directory health-check probes and first-time evaluations cost-free. Apify retains a 20 % commission on all PPE revenue; the prices above are gross amounts.
 
 ---
 
