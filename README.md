@@ -1,6 +1,6 @@
-# Toolstem SEC MCP Server
+# SEC EDGAR MCP Server — Insider Signals, 13F Holdings & Filing Intelligence
 
-**Signal-first SEC EDGAR intelligence for AI agents.** Five tools that answer questions directly — "Is the CEO buying?", "Has there been a restatement?", "Is an activist circling?" — instead of returning raw filing lists.
+**SEC EDGAR intelligence for AI agents.** Five tools that answer the questions that matter: insider Form 4 trading signals, SC 13D activist risk flags, 10-K/8-K filing velocity, 8-K material event severity (RED/YELLOW/GREEN), and multi-company disclosure comparisons — all returned as structured JSON, direct from SEC EDGAR. No API key required.
 
 ---
 
