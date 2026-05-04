@@ -160,7 +160,7 @@ const DisclosureComparisonShape = {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'toolstem-sec-mcp-server',
-    version: '0.1.2',
+    version: '0.1.3',
   });
 
   // ---------------------------------------------------------------------------
@@ -187,6 +187,13 @@ export function createServer(): McpServer {
           ),
       },
       outputSchema: CompanyFilingsSummaryShape,
+      annotations: {
+        title: 'Company Filings Summary',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ ticker_or_cik }) => {
       const result = await getCompanyFilingsSummary(ticker_or_cik);
@@ -225,6 +232,13 @@ export function createServer(): McpServer {
           .describe('Number of calendar days to look back (default 90, max 730).'),
       },
       outputSchema: InsiderSignalShape,
+      annotations: {
+        title: 'Insider Signal',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ ticker_or_cik, lookback_days }) => {
       const result = await getInsiderSignal(ticker_or_cik, lookback_days ?? 90);
@@ -264,6 +278,13 @@ export function createServer(): McpServer {
           .describe('Number of calendar quarters to look back (default 4 ≈ 1 year, max 20).'),
       },
       outputSchema: InstitutionalSignalShape,
+      annotations: {
+        title: 'Institutional Signal',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ ticker_or_cik, quarters_back }) => {
       const result = await getInstitutionalSignal(ticker_or_cik, quarters_back ?? 4);
@@ -304,6 +325,13 @@ export function createServer(): McpServer {
           .describe('Number of calendar days to include (default 365, max 1825 / 5 years).'),
       },
       outputSchema: MaterialEventsDigestShape,
+      annotations: {
+        title: 'Material Events Digest',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ ticker_or_cik, lookback_days }) => {
       const result = await getMaterialEventsDigest(ticker_or_cik, lookback_days ?? 365);
@@ -339,6 +367,13 @@ export function createServer(): McpServer {
           ),
       },
       outputSchema: DisclosureComparisonShape,
+      annotations: {
+        title: 'Compare Disclosure Signals',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     async ({ tickers_or_ciks }) => {
       const result = await compareDisclosureSignals(tickers_or_ciks);

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.3] - 2026-05-04
+
+### Added — MCP tool annotations
+
+All five tools (`get_company_filings_summary`, `get_insider_signal`, `get_institutional_signal`, `get_material_events_digest`, `compare_disclosure_signals`) now expose the standard MCP `annotations` block:
+
+- `readOnlyHint: true` — SEC EDGAR is read-only by definition
+- `destructiveHint: false` — tools never mutate state
+- `idempotentHint: true` — same ticker/CIK + lookback yields same digest
+- `openWorldHint: true` — tools fetch live from data.sec.gov
+- `title` — human-readable display label
+
+Motivated by Anthropic Connectors Directory submission requirements. Purely additive metadata; no behavioral change.
+
 ## [0.1.2] - 2026-04-29
 
 ### Changed
