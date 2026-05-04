@@ -1,6 +1,6 @@
 {
   "name": "toolstem-sec-mcp-server",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Agent-ready SEC filing intelligence MCP server — insider signals, institutional flow, material events digest. Pre-computed signals over raw filings.",
   "type": "module",
   "main": "dist/index.js",
