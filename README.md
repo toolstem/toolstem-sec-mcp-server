@@ -242,6 +242,33 @@ toolstem-sec-mcp-server --http
 # Listens on http://0.0.0.0:3000/mcp
 ```
 
+### Use with LangChain.js (hosted, agent pays via x402)
+
+The hosted endpoint at `https://mcp.toolstem.com/mcp/sec` is gated by [x402](https://www.x402.org) on Base mainnet. Agents pay $0.01 USDC per call directly from their own wallet — no API key, no signup, no marketplace account required. This is the AI-to-AI revenue path.
+
+The official [`@langchain/mcp-adapters`](https://www.npmjs.com/package/@langchain/mcp-adapters) library connects directly:
+
+```ts
+import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+const client = new MultiServerMCPClient({
+  toolstem_sec: {
+    transport: "streamable_http",
+    url: "https://mcp.toolstem.com/mcp/sec",
+    // Add your x402-signing middleware via headers, OR run an x402
+    // proxy locally and point url at it. See https://www.x402.org/clients.
+  },
+});
+
+const tools = await client.getTools();
+const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-5.4" }), tools });
+await agent.invoke({ messages: "Has TSLA disclosed any material 8-K events in the last 90 days?" });
+```
+
+For agents tethered to a human's Apify account, point at `https://api.apify.com/v2/acts/toolstem~toolstem-sec-mcp-server/run-sync` instead and pass your Apify token in the `Authorization: Bearer ...` header. Apify handles billing under the PPE table above.
+
 ---
 
 ## SEC EDGAR fair-access policy
