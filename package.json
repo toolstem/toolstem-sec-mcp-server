@@ -1,6 +1,6 @@
 {
   "name": "toolstem-sec-mcp-server",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Agent-ready SEC filing intelligence MCP server — insider signals, institutional flow, material events digest. Pre-computed signals over raw filings.",
   "type": "module",
   "main": "dist/index.js",
@@ -47,16 +47,16 @@
     "url": "https://github.com/toolstem/toolstem-sec-mcp-server.git"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "apify": "^3.3.0",
-    "express": "^4.21.0",
-    "zod": "^3.24.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "apify": "^3.7.0",
+    "express": "^5.2.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.5] - 2026-05-04
+
+### Changed
+
+- Tightened dependency ranges to clear false-positive scanner findings; no behavior change. Floors raised to currently-resolved versions: `@modelcontextprotocol/sdk` `^1.29.0`, `express` `^5.2.1`, `apify` `^3.7.0`, `zod` `^3.25.76`, `@types/express` `^5.0.6`, `@types/node` `^22.19.17`, `tsx` `^4.21.0`, `typescript` `^5.9.3`. Lockfile regenerated. No code changes.
+
 ## [0.1.3] - 2026-05-04
 
 ### Added — MCP tool annotations
