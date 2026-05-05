@@ -1,20 +1,35 @@
-# SEC EDGAR MCP Server — Insider Signals, 13F Holdings & Filing Intelligence
+# SEC EDGAR MCP Server — Insider Signals, 13D Activist Risk & Filing Intelligence
 
-**SEC EDGAR intelligence for AI agents.** Five tools that answer the questions that matter: insider Form 4 trading signals, SC 13D activist risk flags, 10-K/8-K filing velocity, 8-K material event severity (RED/YELLOW/GREEN), and multi-company disclosure comparisons — all returned as structured JSON, direct from SEC EDGAR. No API key required.
+**SEC EDGAR intelligence for AI agents.** Five composite tools that pre-compute high-value signals directly from SEC EDGAR's public submissions API, returned as structured JSON.
+
+> **No SEC API key required.** Data is sourced directly from SEC EDGAR's public submissions API. A built-in sliding-window rate limiter keeps traffic under SEC's 10 rps fair-access ceiling automatically.
 
 ---
 
-## Why this exists
+## Free vs. paid
 
-Existing SEC data tools give agents paginated filing lists and raw XML. Agents then have to parse, classify, and derive signals themselves — burning context window on bureaucratic extraction instead of analysis.
-
-Toolstem SEC MCP Server pre-computes five high-value signals directly from SEC EDGAR's public submissions API, returning structured, agent-ready JSON. No third-party data providers, no API keys, no per-symbol fees — just SEC EDGAR's authoritative source with a rate-limiter that keeps you off their blocklist.
+- **MCP `initialize` and `tools/list` are free** — discover the server and its tool surface without paying anything.
+- **`tools/call` costs $0.01 USDC on Base mainnet per invocation, paid via [x402](https://www.x402.org).** No API key, no signup, no marketplace account — agents pay directly from their own wallet.
+- The premium tool (`get_material_events_digest`) is currently billed at the same $0.01 flat rate while the tiered-pricing rollout is in progress; **its per-call price will move higher post-launch**.
 
 ---
 
 ## The five tools
 
+All five tools are composite/curated (they compute derived signals or aggregate across multiple EDGAR endpoints — no raw passthroughs). Annotations: `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true`.
+
+| # | Tool | Required input | Optional input (default) | Tier |
+|---|------|----------------|--------------------------|------|
+| 1 | `get_company_filings_summary` | `ticker_or_cik` (string) | — | Standard |
+| 2 | `get_insider_signal` | `ticker_or_cik` (string) | `lookback_days` (int 1–730, **default 90**) | Standard |
+| 3 | `get_institutional_signal` | `ticker_or_cik` (string) | `quarters_back` (int 1–20, **default 4**) | Standard |
+| 4 | `get_material_events_digest` | `ticker_or_cik` (string) | `lookback_days` (int 1–1825, **default 365**) | **Premium** |
+| 5 | `compare_disclosure_signals` | `tickers_or_ciks` (string[2..5]) | — | Standard |
+
+---
+
 ### 1. `get_company_filings_summary`
+
 Overview of a company's filing activity: last 20 filings + computed signals.
 
 | Signal | Description |
@@ -43,11 +58,12 @@ Overview of a company's filing activity: last 20 filings + computed signals.
 ---
 
 ### 2. `get_insider_signal`
-Probes Form 3/4/4A insider filing activity within a lookback window.
 
-Returns: `recent_insider_filings` (accession numbers + SEC URLs for Forms 3/4/4A), `lookback_days`, and counts.
+Probes Form 3 / 4 / 4/A insider filing activity within a configurable lookback window. Required: `ticker_or_cik`. Optional: `lookback_days` (1–730, default 90).
 
-> **v0.1 note:** When at least one Form 3/4/4A filing exists in the lookback window, `insider_signal` is `null` ("direction unknown — Form 4 XML parsing ships in v0.2"). When no insider filings exist in the window, `insider_signal` is `"NEUTRAL"` ("verified absence of activity"). `buy_count` and `sell_count` are 0 in v0.1.
+Returns: `recent_insider_filings[]` (accession numbers + SEC URLs), `net_transaction_count`, `buy_count`, `sell_count`, and `insider_signal`.
+
+> **v0.1 limitation — counts only.** v0.1 returns counts and Form 4 references only; **direction-aware buy/sell signals ship in v0.2** (Form 4 XML parsing). Today, `insider_signal` is `null` when filings exist in the window (direction unknown) and `"NEUTRAL"` when no insider filings exist (verified absence). `buy_count` / `sell_count` are `0` in v0.1.
 
 **Example output (abbreviated):**
 ```json
@@ -74,14 +90,15 @@ Returns: `recent_insider_filings` (accession numbers + SEC URLs for Forms 3/4/4A
 ---
 
 ### 3. `get_institutional_signal`
-Probes for activist investor activity via SC 13D / 13D/A filings.
+
+Probes for activist investor activity via SC 13D / 13D/A filings. Required: `ticker_or_cik`. Optional: `quarters_back` (1–20, default 4 ≈ 1 year).
 
 | Field | Description |
 |-------|-------------|
 | `activist_risk_flag` | `true` if any SC 13D or 13D/A was filed in the last 365 days |
 | `recent_13d_filings` | List of 13D filings with form type, date, and SEC URL |
 
-> **v0.1 note:** `institutional_signal` and `recent_13f_count` are null/0. Quarterly 13F XBRL/XML parsing (ACCUMULATING / HOLDING / DISTRIBUTING) ships in v0.2.
+> **v0.1 limitation — activist flag only.** v0.1 ships the **live `activist_risk_flag` (from 13D/13D-A)** and a list of 13D filings. Quarterly **13F XBRL parsing** — which produces `institutional_signal` (`ACCUMULATING` / `HOLDING` / `DISTRIBUTING`) and `recent_13f_count` — **ships in v0.2**. Today those two fields are `null` / `0`.
 
 **Example output (abbreviated):**
 ```json
@@ -100,8 +117,11 @@ Probes for activist investor activity via SC 13D / 13D/A filings.
 
 ---
 
-### 4. `get_material_events_digest` ⚡ premium ($0.50)
-Severity-ranked digest of all 8-K and 8-K/A filings within a lookback window. Maps each item code to a plain-English label and severity rating.
+### 4. `get_material_events_digest` ⚡ **Premium tier**
+
+> **Premium tier.** Currently billed at the same flat $0.01 USDC per call as the standard tools while tiered pricing is being rolled out. **Per-call price will move higher post-launch** — see the live pricing page on [toolstem.com/sec/](https://toolstem.com/sec/) for the current rate.
+
+Severity-ranked digest of all 8-K and 8-K/A filings within a configurable lookback window. Each item code is mapped to a plain-English label and severity rating. Required: `ticker_or_cik`. Optional: `lookback_days` (1–1825, default 365).
 
 | Severity | Examples |
 |----------|---------|
@@ -138,7 +158,8 @@ Returns: `events[]` (sorted newest-first), `redflag_count`, `category_counts`.
 ---
 
 ### 5. `compare_disclosure_signals`
-Side-by-side comparison of 2-5 companies across all key disclosure signals. All lookups run in parallel.
+
+Side-by-side comparison of 2–5 companies across all key disclosure signals. Required: `tickers_or_ciks` (string[2..5]). All lookups run in parallel.
 
 Returns per-company: `filing_velocity`, `material_event_count_90d`, `redflag_count_365d`, `activist_risk_flag`, `last_filing_date`.
 
@@ -179,62 +200,63 @@ Returns winners (as **CIKs**, not tickers — cross-reference with the `companie
 
 ---
 
-## Pricing
-
-All calls are billed on a **per-result** basis via Apify's Pay-Per-Event (PPE) system. Pricing is charged at the time the tool returns its result.
-
-| Tool | Tier | Price per call |
-| --- | --- | --- |
-| `get_company_filings_summary` | Cheap | $0.005 |
-| `get_insider_signal` | Standard | $0.05 |
-| `get_institutional_signal` | Standard | $0.05 |
-| `get_material_events_digest` | Premium | $0.50 |
-| `compare_disclosure_signals` | Premium | $0.50 |
-
-Default-demo probes (Actor runs with no `tool` input) are **free** — they serve a cached result and do not fire a PPE charge. This keeps directory health-check probes and first-time evaluations cost-free. Apify retains a 20 % commission on all PPE revenue; the prices above are gross amounts.
-
----
-
 ## Installation
 
-### npm (MCP stdio transport)
+### Hosted server (recommended — no setup, agent pays via x402)
 
-```bash
-npm install -g toolstem-sec-mcp-server
+The hosted endpoint is the fastest path to try the tools. It is gated by [x402](https://www.x402.org) on Base mainnet:
+
+```
+https://mcp.toolstem.com/mcp/sec
 ```
 
-Add to your MCP client config (Claude Desktop, Cursor, etc.):
+- `initialize` and `tools/list` are **free**.
+- Each `tools/call` costs **$0.01 USDC on Base mainnet**, settled via x402 directly from the agent's wallet.
+- **No SEC API key. No signup. No marketplace account.**
+
+### Claude Desktop config
+
+Use the hosted endpoint (no local install):
 
 ```json
 {
   "mcpServers": {
     "toolstem-sec": {
-      "command": "toolstem-sec-mcp-server"
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.toolstem.com/mcp/sec"
+      ]
     }
   }
 }
 ```
 
-No API key required.
+Or run locally over stdio (no x402 charges, you bring your own EDGAR fair-access contact):
 
-### Hosted on Apify
-
-Run the Actor directly or connect via the MCP gateway:
-
-```
-https://mcp.apify.com/?tools=toolstem/toolstem-sec-mcp-server
-```
-
-Actor input example:
 ```json
 {
-  "tool": "get_material_events_digest",
-  "ticker_or_cik": "TSLA",
-  "lookback_days": 365
+  "mcpServers": {
+    "toolstem-sec": {
+      "command": "npx",
+      "args": ["-y", "toolstem-sec-mcp-server"],
+      "env": {
+        "SEC_USER_AGENT_CONTACT": "you@yourorg.com"
+      }
+    }
+  }
 }
 ```
 
-### HTTP server (self-hosted)
+### npm (MCP stdio transport)
+
+```bash
+npm install -g toolstem-sec-mcp-server
+toolstem-sec-mcp-server
+```
+
+### Self-hosted HTTP
 
 ```bash
 npm install -g toolstem-sec-mcp-server
@@ -244,9 +266,7 @@ toolstem-sec-mcp-server --http
 
 ### Use with LangChain.js (hosted, agent pays via x402)
 
-The hosted endpoint at `https://mcp.toolstem.com/mcp/sec` is gated by [x402](https://www.x402.org) on Base mainnet. Agents pay $0.01 USDC per call directly from their own wallet — no API key, no signup, no marketplace account required. This is the AI-to-AI revenue path.
-
-The official [`@langchain/mcp-adapters`](https://www.npmjs.com/package/@langchain/mcp-adapters) library connects directly:
+The official [`@langchain/mcp-adapters`](https://www.npmjs.com/package/@langchain/mcp-adapters) library connects directly to the hosted endpoint:
 
 ```ts
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
@@ -263,11 +283,9 @@ const client = new MultiServerMCPClient({
 });
 
 const tools = await client.getTools();
-const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-5.4" }), tools });
+const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-4o-mini" }), tools });
 await agent.invoke({ messages: "Has TSLA disclosed any material 8-K events in the last 90 days?" });
 ```
-
-For agents tethered to a human's Apify account, point at `https://api.apify.com/v2/acts/toolstem~toolstem-sec-mcp-server/run-sync` instead and pass your Apify token in the `Authorization: Bearer ...` header. Apify handles billing under the PPE table above.
 
 ---
 
@@ -288,6 +306,7 @@ Violating SEC's fair-access policy can result in your IP being blocked. This ser
 - **Form 4 XML parsing** — direction-aware insider signals (`STRONG_BUYING` / `BUYING` / `NEUTRAL` / `SELLING` / `STRONG_SELLING`) with net share counts
 - **13F XBRL parsing** — quarterly institutional flow signals (`ACCUMULATING` / `HOLDING` / `DISTRIBUTING`) with institution count
 - **8-K text extraction** — natural-language summaries of each material event from the filing's primary HTML document
+- **Tiered pricing** for the premium digest tool (currently flat-priced at $0.01/call during launch)
 
 ---
 
@@ -295,4 +314,4 @@ Violating SEC's fair-access policy can result in your IP being blocked. This ser
 
 MIT License — see [LICENSE](./LICENSE).
 
-Built by [Toolstem](https://github.com/toolstem). Data sourced directly from [SEC EDGAR](https://www.sec.gov/developer).
+Built by [Toolstem](https://toolstem.com/sec/). Data sourced directly from [SEC EDGAR](https://www.sec.gov/developer).
