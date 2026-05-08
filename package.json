@@ -1,6 +1,6 @@
 {
   "name": "toolstem-sec-mcp-server",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Agent-ready SEC filing intelligence MCP server — insider signals, institutional flow, material events digest. Pre-computed signals over raw filings.",
   "type": "module",
   "main": "dist/index.js",
@@ -49,7 +49,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "apify": "^3.7.0",
-    "express": "^5.2.1",
+    "express": "^5.1.0",
     "express-rate-limit": "^7.5.1",
     "zod": "^3.25.76"
   },

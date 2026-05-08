@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.8] - 2026-05-08
+### Security / Maintenance
+- Upgrade Express 4 → 5; resolves dual-version install (F-SEC-05)
+
 ## [0.1.7] - 2026-05-08
 
 ### Security — HTTP mode hardened (parity with Finance v1.2.13)
