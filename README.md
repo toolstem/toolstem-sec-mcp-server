@@ -258,11 +258,33 @@ toolstem-sec-mcp-server
 
 ### Self-hosted HTTP
 
+Three modes:
+
+**Local-only (default — safest):**
 ```bash
-npm install -g toolstem-sec-mcp-server
 toolstem-sec-mcp-server --http
-# Listens on http://0.0.0.0:3000/mcp
+# Binds 127.0.0.1:3000 — reachable only from this machine
 ```
+
+**Remote with auth:**
+```bash
+ALLOW_REMOTE=1 MCP_AUTH_TOKEN=my-secret toolstem-sec-mcp-server --http
+# Binds 0.0.0.0:3000 — requires Bearer token on every /mcp request
+```
+
+**Remote without auth (use at your own risk):**
+```bash
+ALLOW_REMOTE=1 MCP_AUTH_DISABLED=1 toolstem-sec-mcp-server --http
+# Binds 0.0.0.0:3000 — no authentication
+```
+
+| Variable | Description |
+|----------|-------------|
+| `PORT` | HTTP port (default `3000`) |
+| `ALLOW_REMOTE` | Set to `1` to bind `0.0.0.0` instead of `127.0.0.1` |
+| `MCP_AUTH_TOKEN` | Bearer token for `/mcp` routes (required when `ALLOW_REMOTE=1`) |
+| `MCP_AUTH_DISABLED` | Set to `1` to skip auth even with `ALLOW_REMOTE=1` (not recommended) |
+| `SEC_USER_AGENT_CONTACT` | Contact email for SEC EDGAR User-Agent header |
 
 ### Use with LangChain.js (hosted, agent pays via x402)
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.7] - 2026-05-08
+
+### Security — HTTP mode hardened (parity with Finance v1.2.13)
+
+- Default bind address changed from `0.0.0.0` to `127.0.0.1`; set `ALLOW_REMOTE=1` to restore network-wide binding.
+- Bearer-token authentication middleware (`MCP_AUTH_TOKEN`) using `crypto.timingSafeEqual` on equal-length buffers.
+- Server refuses to start when `ALLOW_REMOTE=1` is set without `MCP_AUTH_TOKEN` (override: `MCP_AUTH_DISABLED=1`).
+- Per-IP rate limiting on `/mcp` routes (150 req/min) via `express-rate-limit`.
+- Startup banner displays bind address, port, and auth status.
+- Error responses in HTTP handler now return generic message; details logged server-side only.
+- `npm audit fix` applied for transitive dependency vulnerabilities.
+
+Credit: Ryan (security report).
+
 ## [0.1.6] - 2026-05-04
 
 ### Fixed
