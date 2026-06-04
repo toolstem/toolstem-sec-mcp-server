@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.9] - 2026-06-04
+### Documentation
+- **Hosted endpoint as default path (README update).** The README now leads with the hosted x402 endpoint as the recommended path, moves self-hosting to an Advanced section, and corrects the SEC tiered pricing. Documentation-only change (PR #5, merged); no payment, auth, or x402 logic touched. Republished so the updated README propagates to mcp.so and Glama.
+- Version promoted to 0.1.9 across `package.json`, `server.json` (top-level + `packages[0]`), and the versioned locations in `src/index.ts`.
+
 ## [0.1.8] - 2026-05-08
 ### Security / Maintenance
 - Upgrade Express 4 → 5; resolves dual-version install (F-SEC-05)

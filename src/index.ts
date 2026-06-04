@@ -161,7 +161,7 @@ const DisclosureComparisonShape = {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: 'toolstem-sec-mcp-server',
-    version: '0.1.8',
+    version: '0.1.9',
   });
 
   // ---------------------------------------------------------------------------
@@ -487,7 +487,7 @@ async function runHttp(): Promise<void> {
   // /health is intentionally unauthenticated: load balancers and uptime probes
   // need to reach it without credentials. It exposes no secrets or user data.
   app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.8' });
+    res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.9' });
   });
 
   app.post('/mcp', mcpLimiter, bearerAuth, async (req: Request, res: Response) => {
@@ -556,7 +556,7 @@ async function runHttp(): Promise<void> {
   app.listen(port, bindHost, () => {
     // eslint-disable-next-line no-console
     console.log(
-      `\n  Toolstem SEC MCP server v0.1.8\n` +
+      `\n  Toolstem SEC MCP server v0.1.9\n` +
       `  Listening on http://${bindHost}:${port}/mcp\n` +
       `  Auth:    ${authEnabled ? 'ENABLED (bearer token)' : 'DISABLED'}\n` +
       `  Remote:  ${allowRemote ? 'ALLOWED (0.0.0.0)' : 'localhost only (127.0.0.1)'}` +
