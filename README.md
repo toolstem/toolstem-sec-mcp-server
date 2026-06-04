@@ -6,11 +6,80 @@
 
 ---
 
-## Free vs. paid
+## Quickstart — hosted endpoint (recommended)
+
+Point your MCP client or agent at the hosted endpoint. **No API key, no infra, no setup.** Billing is per-call via [x402](https://www.x402.org) — the agent's wallet pays directly in USDC on Base mainnet.
+
+```
+https://mcp.toolstem.com/mcp/sec
+```
+
+- **No SEC API key, no signup, no marketplace account** — the agent's wallet pays directly.
+- **No infrastructure** — nothing to install, host, or keep running.
+- **No setup** — connect an MCP client and call a tool.
+- `initialize` and `tools/list` are **free** (discovery and schema introspection).
+- `tools/call` is **tiered per tool** (see [Pricing](#pricing) below).
+
+### Claude Desktop
+
+Drop this into your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "toolstem-sec": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.toolstem.com/mcp/sec"
+      ]
+    }
+  }
+}
+```
+
+Restart Claude Desktop, then ask: *"Has TSLA disclosed any material 8-K events in the last 90 days?"*
+
+### Any MCP client (LangChain.js)
+
+The official [`@langchain/mcp-adapters`](https://www.npmjs.com/package/@langchain/mcp-adapters) library connects directly to the hosted URL:
+
+```ts
+import { MultiServerMCPClient } from "@langchain/mcp-adapters";
+import { ChatOpenAI } from "@langchain/openai";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+
+const client = new MultiServerMCPClient({
+  toolstem_sec: {
+    transport: "http",
+    url: "https://mcp.toolstem.com/mcp/sec",
+    // Add your x402-signing middleware via headers, OR run an x402
+    // proxy locally and point url at it. See https://www.x402.org/clients.
+  },
+});
+
+const tools = await client.getTools();
+const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-4o-mini" }), tools });
+await agent.invoke({ messages: "Has TSLA disclosed any material 8-K events in the last 90 days?" });
+```
+
+Prefer to run the server yourself over stdio/HTTP? See [Advanced: self-host](#advanced-self-host) at the bottom.
+
+---
+
+## Pricing
 
 - **MCP `initialize` and `tools/list` are free** — discover the server and its tool surface without paying anything.
-- **`tools/call` costs $0.01 USDC on Base mainnet per invocation, paid via [x402](https://www.x402.org).** No API key, no signup, no marketplace account — agents pay directly from their own wallet.
-- The premium tool (`get_material_events_digest`) is currently billed at the same $0.01 flat rate while the tiered-pricing rollout is in progress; **its per-call price will move higher post-launch**.
+- **`tools/call` is tiered per tool**, paid in USDC on Base mainnet via [x402](https://www.x402.org). No API key, no signup, no marketplace account — agents pay directly from their own wallet.
+
+| Tier | Price per call | Tools |
+|------|----------------|-------|
+| Cheap | **$0.005** | `get_company_filings_summary` |
+| Standard | **$0.05** | `get_insider_signal`, `get_institutional_signal` |
+| Premium | **$0.50** | `get_material_events_digest`, `compare_disclosure_signals` |
+
+See the live pricing page on [toolstem.com/sec/](https://toolstem.com/sec/) for current rates.
 
 ---
 
@@ -18,13 +87,13 @@
 
 All five tools are composite/curated (they compute derived signals or aggregate across multiple EDGAR endpoints — no raw passthroughs). Annotations: `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true`.
 
-| # | Tool | Required input | Optional input (default) | Tier |
-|---|------|----------------|--------------------------|------|
-| 1 | `get_company_filings_summary` | `ticker_or_cik` (string) | — | Standard |
-| 2 | `get_insider_signal` | `ticker_or_cik` (string) | `lookback_days` (int 1–730, **default 90**) | Standard |
-| 3 | `get_institutional_signal` | `ticker_or_cik` (string) | `quarters_back` (int 1–20, **default 4**) | Standard |
-| 4 | `get_material_events_digest` | `ticker_or_cik` (string) | `lookback_days` (int 1–1825, **default 365**) | **Premium** |
-| 5 | `compare_disclosure_signals` | `tickers_or_ciks` (string[2..5]) | — | Standard |
+| # | Tool | Required input | Optional input (default) | Tier (price/call) |
+|---|------|----------------|--------------------------|-------------------|
+| 1 | `get_company_filings_summary` | `ticker_or_cik` (string) | — | Cheap ($0.005) |
+| 2 | `get_insider_signal` | `ticker_or_cik` (string) | `lookback_days` (int 1–730, **default 90**) | Standard ($0.05) |
+| 3 | `get_institutional_signal` | `ticker_or_cik` (string) | `quarters_back` (int 1–20, **default 4**) | Standard ($0.05) |
+| 4 | `get_material_events_digest` | `ticker_or_cik` (string) | `lookback_days` (int 1–1825, **default 365**) | **Premium ($0.50)** |
+| 5 | `compare_disclosure_signals` | `tickers_or_ciks` (string[2..5]) | — | **Premium ($0.50)** |
 
 ---
 
@@ -119,7 +188,7 @@ Probes for activist investor activity via SC 13D / 13D/A filings. Required: `tic
 
 ### 4. `get_material_events_digest` ⚡ **Premium tier**
 
-> **Premium tier.** Currently billed at the same flat $0.01 USDC per call as the standard tools while tiered pricing is being rolled out. **Per-call price will move higher post-launch** — see the live pricing page on [toolstem.com/sec/](https://toolstem.com/sec/) for the current rate.
+> **Premium tier — $0.50 USDC per call** on Base mainnet, settled via x402. See the live pricing page on [toolstem.com/sec/](https://toolstem.com/sec/) for current rates.
 
 Severity-ranked digest of all 8-K and 8-K/A filings within a configurable lookback window. Each item code is mapped to a plain-English label and severity rating. Required: `ticker_or_cik`. Optional: `lookback_days` (1–1825, default 365).
 
@@ -200,40 +269,13 @@ Returns winners (as **CIKs**, not tickers — cross-reference with the `companie
 
 ---
 
-## Installation
+## Advanced: self-host
 
-### Hosted server (recommended — no setup, agent pays via x402)
+> **Most users should use the [hosted endpoint](#quickstart--hosted-endpoint-recommended) above** — it needs no API key, no infrastructure, and no setup. This section is for users who specifically want to run the server themselves. When self-hosting you are responsible for running the process and for supplying an EDGAR fair-access contact (`SEC_USER_AGENT_CONTACT`).
 
-The hosted endpoint is the fastest path to try the tools. It is gated by [x402](https://www.x402.org) on Base mainnet:
+### Claude Desktop (self-hosted over stdio)
 
-```
-https://mcp.toolstem.com/mcp/sec
-```
-
-- `initialize` and `tools/list` are **free**.
-- Each `tools/call` costs **$0.01 USDC on Base mainnet**, settled via x402 directly from the agent's wallet.
-- **No SEC API key. No signup. No marketplace account.**
-
-### Claude Desktop config
-
-Use the hosted endpoint (no local install):
-
-```json
-{
-  "mcpServers": {
-    "toolstem-sec": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.toolstem.com/mcp/sec"
-      ]
-    }
-  }
-}
-```
-
-Or run locally over stdio (no x402 charges, you bring your own EDGAR fair-access contact):
+Run locally over stdio — no x402 charges, you bring your own EDGAR fair-access contact:
 
 ```json
 {
@@ -286,29 +328,6 @@ ALLOW_REMOTE=1 MCP_AUTH_DISABLED=1 toolstem-sec-mcp-server --http
 | `MCP_AUTH_DISABLED` | Set to `1` to skip auth even with `ALLOW_REMOTE=1` (not recommended) |
 | `SEC_USER_AGENT_CONTACT` | Contact email for SEC EDGAR User-Agent header |
 
-### Use with LangChain.js (hosted, agent pays via x402)
-
-The official [`@langchain/mcp-adapters`](https://www.npmjs.com/package/@langchain/mcp-adapters) library connects directly to the hosted endpoint:
-
-```ts
-import { MultiServerMCPClient } from "@langchain/mcp-adapters";
-import { ChatOpenAI } from "@langchain/openai";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
-
-const client = new MultiServerMCPClient({
-  toolstem_sec: {
-    transport: "http",
-    url: "https://mcp.toolstem.com/mcp/sec",
-    // Add your x402-signing middleware via headers, OR run an x402
-    // proxy locally and point url at it. See https://www.x402.org/clients.
-  },
-});
-
-const tools = await client.getTools();
-const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-4o-mini" }), tools });
-await agent.invoke({ messages: "Has TSLA disclosed any material 8-K events in the last 90 days?" });
-```
-
 ---
 
 ## SEC EDGAR fair-access policy
@@ -328,7 +347,6 @@ Violating SEC's fair-access policy can result in your IP being blocked. This ser
 - **Form 4 XML parsing** — direction-aware insider signals (`STRONG_BUYING` / `BUYING` / `NEUTRAL` / `SELLING` / `STRONG_SELLING`) with net share counts
 - **13F XBRL parsing** — quarterly institutional flow signals (`ACCUMULATING` / `HOLDING` / `DISTRIBUTING`) with institution count
 - **8-K text extraction** — natural-language summaries of each material event from the filing's primary HTML document
-- **Tiered pricing** for the premium digest tool (currently flat-priced at $0.01/call during launch)
 
 ---
 
