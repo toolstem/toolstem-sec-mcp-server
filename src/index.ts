@@ -407,6 +407,24 @@ async function runHttp(): Promise<void> {
   const bindHost = allowRemote ? '0.0.0.0' : '127.0.0.1';
 
   // ---------------------------------------------------------------------------
+  // Validate SEC_USER_AGENT_CONTACT (optional override). SEC fair-access policy
+  // requires a valid contact email in the User-Agent. If set, it must look like
+  // an email; an obviously malformed value would get our IP throttled/blocked,
+  // so reject it at startup rather than silently sending a bad header.
+  // ---------------------------------------------------------------------------
+  const secContact = process.env.SEC_USER_AGENT_CONTACT?.trim();
+  if (secContact !== undefined && secContact.length > 0) {
+    const emailLike = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secContact);
+    if (!emailLike) {
+      console.error(
+        `ERROR: SEC_USER_AGENT_CONTACT is set but does not look like a valid email: "${secContact}".\n` +
+        'SEC EDGAR fair-access policy requires a valid contact email in the User-Agent header.',
+      );
+      process.exit(1);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Auth: required when ALLOW_REMOTE=1 unless explicitly disabled
   // ---------------------------------------------------------------------------
   const authToken = process.env.MCP_AUTH_TOKEN;
@@ -452,7 +470,15 @@ async function runHttp(): Promise<void> {
   const app = express();
   app.use(express.json({ limit: '4mb' }));
 
-  const port = Number.parseInt(process.env.PORT ?? '3000', 10);
+  // Validate PORT: must be an integer in the valid TCP range. Default 3000.
+  const rawPort = process.env.PORT ?? '3000';
+  const port = Number.parseInt(rawPort, 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error(
+      `ERROR: PORT must be an integer between 1 and 65535, got "${rawPort}".`,
+    );
+    process.exit(1);
+  }
 
   // ---------------------------------------------------------------------------
   // Rate limiting on /mcp — 150 requests per minute per IP
@@ -462,7 +488,13 @@ async function runHttp(): Promise<void> {
     limit: 150,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
-    message: { error: 'Rate limit exceeded — try again in a minute' },
+    // Log each rejection so operators can spot abuse / runaway clients.
+    handler: (req: Request, res: Response) => {
+      console.warn(
+        `[mcp] rate limit exceeded: ip=${req.ip} method=${req.method} path=${req.path}`,
+      );
+      res.status(429).json({ error: 'Rate limit exceeded — try again in a minute' });
+    },
   });
 
   // Per-session transport registry for Streamable HTTP, with TTL cleanup.
@@ -471,21 +503,44 @@ async function runHttp(): Promise<void> {
     lastActivity: number;
   }
   const sessions = new Map<string, SessionEntry>();
-
-  // Sweep stale sessions every 60 seconds (30-minute inactivity TTL).
   const SESSION_TTL_MS = 30 * 60 * 1000;
+
+  // Close and remove a session immediately (event-driven cleanup).
+  function dropSession(id: string): void {
+    const entry = sessions.get(id);
+    if (!entry) return;
+    sessions.delete(id);
+    try { entry.transport.close?.(); } catch { /* ignore */ }
+  }
+
+  // Event-driven eviction: if a looked-up session is already past its TTL,
+  // drop it now instead of waiting for the periodic sweep. Returns the live
+  // entry, or undefined if the session was expired (and has been evicted).
+  function touchSession(id: string): SessionEntry | undefined {
+    const entry = sessions.get(id);
+    if (!entry) return undefined;
+    if (Date.now() - entry.lastActivity > SESSION_TTL_MS) {
+      dropSession(id);
+      return undefined;
+    }
+    entry.lastActivity = Date.now();
+    return entry;
+  }
+
+  // Periodic sweep is now only a backstop for sessions that are never touched
+  // again (cleanup is primarily driven by transport.onclose and touchSession).
   setInterval(() => {
     const now = Date.now();
     for (const [id, entry] of sessions) {
       if (now - entry.lastActivity > SESSION_TTL_MS) {
-        try { entry.transport.close?.(); } catch { /* ignore */ }
-        sessions.delete(id);
+        dropSession(id);
       }
     }
   }, 60_000).unref();
 
-  // /health is intentionally unauthenticated: load balancers and uptime probes
-  // need to reach it without credentials. It exposes no secrets or user data.
+  // Intentionally unauthenticated — required for MCP discovery probes.
+  // Load balancers and uptime probes need to reach it without credentials.
+  // It exposes no secrets or user data.
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', service: 'toolstem-sec-mcp-server', version: '0.1.9' });
   });
@@ -495,10 +550,9 @@ async function runHttp(): Promise<void> {
       const sessionId = req.header('mcp-session-id');
       let transport: StreamableHTTPServerTransport | undefined;
 
-      if (sessionId && sessions.has(sessionId)) {
-        const entry = sessions.get(sessionId)!;
-        entry.lastActivity = Date.now();
-        transport = entry.transport;
+      const existing = sessionId ? touchSession(sessionId) : undefined;
+      if (existing) {
+        transport = existing.transport;
       } else {
         // New session (or no session header) — create a fresh transport + server pair.
         transport = new StreamableHTTPServerTransport({
@@ -508,6 +562,8 @@ async function runHttp(): Promise<void> {
           },
         });
 
+        // Event-driven cleanup: when the transport closes, drop it from the
+        // registry immediately rather than waiting for the periodic sweep.
         transport.onclose = () => {
           if (transport?.sessionId) {
             sessions.delete(transport.sessionId);
@@ -524,32 +580,45 @@ async function runHttp(): Promise<void> {
       }
       await transport.handleRequest(req, res, req.body);
     } catch (err) {
-      console.error('[mcp] unhandled error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Internal server error' });
+      // Distinguish malformed-input (client) errors from genuine server faults.
+      // A JSON SyntaxError or a TypeError from bad payload shape is a 400 — the
+      // client sent something we can't process. Everything else is a 500.
+      // Never echo the error message or stack to the client (it can leak
+      // internal paths / dependency details); log it server-side instead.
+      const isClientError =
+        err instanceof SyntaxError ||
+        (err instanceof Error && err.name === 'BadRequestError');
+      if (isClientError) {
+        console.warn('[mcp] bad request:', err);
+        if (!res.headersSent) {
+          res.status(400).json({ error: 'Bad request' });
+        }
+      } else {
+        console.error('[mcp] unhandled error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Internal server error' });
+        }
       }
     }
   });
 
   app.get('/mcp', mcpLimiter, bearerAuth, async (req: Request, res: Response) => {
     const sessionId = req.header('mcp-session-id');
-    if (!sessionId || !sessions.has(sessionId)) {
+    const entry = sessionId ? touchSession(sessionId) : undefined;
+    if (!entry) {
       res.status(400).json({ error: 'Missing or unknown mcp-session-id' });
       return;
     }
-    const entry = sessions.get(sessionId)!;
-    entry.lastActivity = Date.now();
     await entry.transport.handleRequest(req, res);
   });
 
   app.delete('/mcp', mcpLimiter, bearerAuth, async (req: Request, res: Response) => {
     const sessionId = req.header('mcp-session-id');
-    if (!sessionId || !sessions.has(sessionId)) {
+    const entry = sessionId ? touchSession(sessionId) : undefined;
+    if (!entry) {
       res.status(400).json({ error: 'Missing or unknown mcp-session-id' });
       return;
     }
-    const entry = sessions.get(sessionId)!;
-    entry.lastActivity = Date.now();
     await entry.transport.handleRequest(req, res);
   });
 
