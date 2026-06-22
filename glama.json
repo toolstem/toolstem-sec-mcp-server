@@ -1,5 +1,9 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "Toolstem SEC EDGAR MCP",
+  "description": "SEC insider signals, institutional 13F changes, and material event digests. Tiered pricing ($0.005–$0.50 USDC/call) via x402. No API keys required.",
+  "icon": "https://www.toolstem.com/favicon.ico",
+  "tags": ["sec", "edgar", "insider-trading", "institutional", "x402", "payments", "compliance", "langchain"],
   "maintainers": [
     "toolstem"
   ]
