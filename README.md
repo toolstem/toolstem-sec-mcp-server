@@ -1,5 +1,9 @@
 # SEC EDGAR MCP Server — Insider Signals, 13D Activist Risk & Filing Intelligence
 
+[![npm version](https://img.shields.io/npm/v/toolstem-sec-mcp-server)](https://www.npmjs.com/package/toolstem-sec-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dw/toolstem-sec-mcp-server)](https://www.npmjs.com/package/toolstem-sec-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+
 **SEC EDGAR intelligence for AI agents.** Five composite tools that pre-compute high-value signals directly from SEC EDGAR's public submissions API, returned as structured JSON.
 
 > **No SEC API key required.** Data is sourced directly from SEC EDGAR's public submissions API. A built-in sliding-window rate limiter keeps traffic under SEC's 10 rps fair-access ceiling automatically.
@@ -64,7 +68,19 @@ const agent = createReactAgent({ llm: new ChatOpenAI({ model: "gpt-4o-mini" }), 
 await agent.invoke({ messages: "Has TSLA disclosed any material 8-K events in the last 90 days?" });
 ```
 
+### LangChain quick-start (`langchain-toolstem`)
+
+The [`langchain-toolstem`](https://www.npmjs.com/package/langchain-toolstem) wrapper handles x402 payment for you — pass a funded wallet key and the SEC tools are included automatically:
+
+```typescript
+import { createToolstemTools } from 'langchain-toolstem';
+const tools = await createToolstemTools({ walletPrivateKey: process.env.WALLET_KEY });
+// SEC tools included automatically — agents pay per call in USDC
+```
+
 Prefer to run the server yourself over stdio/HTTP? See [Advanced: self-host](#advanced-self-host) at the bottom.
+
+Try the tools live in the [Toolstem playground](https://www.toolstem.com/playground/).
 
 ---
 
@@ -78,6 +94,20 @@ Prefer to run the server yourself over stdio/HTTP? See [Advanced: self-host](#ad
 | Cheap | **$0.005** | `get_company_filings_summary` |
 | Standard | **$0.05** | `get_insider_signal`, `get_institutional_signal` |
 | Premium | **$0.50** | `get_material_events_digest`, `compare_disclosure_signals` |
+
+Per-tool breakdown:
+
+| Tool | Tier | Per call |
+|------|------|----------|
+| `get_company_filings_summary` | Standard | $0.005 USDC |
+| `get_insider_signal` | Standard | $0.05 USDC |
+| `get_institutional_signal` | Standard | $0.05 USDC |
+| `get_material_events_digest` | Premium | $0.50 USDC |
+| `compare_disclosure_signals` | Premium | $0.50 USDC |
+
+### How billing works
+
+Toolstem uses the x402 payment protocol. Agents pay per call in USDC on Base — no API keys, no subscriptions, no invoices. The agent's wallet settles each call automatically via EIP-3009.
 
 See the live pricing page on [toolstem.com/sec/](https://toolstem.com/sec/) for current rates.
 
